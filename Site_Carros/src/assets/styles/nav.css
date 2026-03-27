@@ -1,0 +1,39 @@
+/* ── Barra de navegação principal ── */
+nav.navbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 24px;
+  background: var(--cor-primaria);
+  height: 56px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+nav.navbar .nav-logo {
+  font-size: 1rem;
+  font-weight: 700;
+  color: white;
+  margin-right: auto;
+  letter-spacing: 0.5px;
+}
+
+nav.navbar a {
+  color: rgba(255,255,255,0.80);
+  text-decoration: none;
+  padding: 6px 14px;
+  border-radius: var(--raio-borda);
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: background 0.2s, color 0.2s;
+}
+
+nav.navbar a:hover {
+  background: rgba(255,255,255,0.12);
+  color: white;
+}
+
+nav.navbar a.router-link-active {
+  background: rgba(255,255,255,0.18);
+  color: white;
+  border-bottom: 2px solid white;
+}

@@ -1,0 +1,281 @@
+================================================================================
+         RELATÓRIO SQL — SISTEMA DE REVISÕES DE VEÍCULOS
+         Schema PostgreSQL: jose_gabriel
+================================================================================
+
+
+--------------------------------------------------------------------------------
+1. LISTAGEM DE USUÁRIOS
+--------------------------------------------------------------------------------
+View: get_Usuarios
+
+    SELECT id, cpf, nome, genero, data_nascimento, endereco
+    FROM jose_gabriel.usuario;
+
+Retorna todos os usuários cadastrados. O serializer pode disparar uma subquery
+adicional para calcular o total de veículos por usuário.
+
+
+--------------------------------------------------------------------------------
+2. DETALHE DE USUÁRIO COM VEÍCULOS E REVISÕES
+--------------------------------------------------------------------------------
+View: get_Usuario
+
+    -- Query 1: busca o usuário
+    SELECT * FROM jose_gabriel.usuario WHERE id = %s;
+
+    -- Query 2: busca veículos e revisões em lote
+    SELECT v.*, r.*
+    FROM jose_gabriel.veiculo v
+    LEFT JOIN jose_gabriel.revisao r ON r.veiculo_id = v.id
+    WHERE v.proprietario_id IN (%s);
+
+Executadas em 2 queries separadas (não um JOIN único). O prefetch_related evita
+o problema N+1 — sem ele seriam disparadas 1 query extra por veículo encontrado.
+
+
+--------------------------------------------------------------------------------
+3. USUÁRIOS AGRUPADOS POR GÊNERO
+--------------------------------------------------------------------------------
+View: usuarios_por_genero
+
+    SELECT
+        genero,
+        COUNT(id)                                              AS total,
+        AVG(EXTRACT(YEAR FROM NOW()) - EXTRACT(YEAR FROM data_nascimento))
+                                                               AS idade_media
+    FROM jose_gabriel.usuario
+    GROUP BY genero;
+
+A idade é aproximada — considera apenas o ano de nascimento, sem levar em conta
+se o aniversário já ocorreu no ano corrente. Para maior precisão usar:
+    DATE_PART('year', AGE(data_nascimento))
+
+
+--------------------------------------------------------------------------------
+4. LISTAGEM DE VEÍCULOS COM PROPRIETÁRIO
+--------------------------------------------------------------------------------
+View: get_Veiculos
+
+    SELECT v.*, u.nome, u.cpf, u.genero
+    FROM jose_gabriel.veiculo v
+    INNER JOIN jose_gabriel.usuario u ON u.id = v.proprietario_id;
+
+JOIN único que traz veículo e proprietário em uma só query, evitando consultas
+extras ao acessar os dados do proprietário de cada veículo.
+
+
+--------------------------------------------------------------------------------
+5. VEÍCULOS ORDENADOS POR PROPRIETÁRIO
+--------------------------------------------------------------------------------
+View: veiculos_por_proprietario
+
+    SELECT u.nome AS proprietario, u.genero, v.placa, v.marca, v.modelo, v.ano
+    FROM jose_gabriel.veiculo v
+    JOIN jose_gabriel.usuario u ON u.id = v.proprietario_id
+    ORDER BY u.nome ASC, v.marca ASC;
+
+Lista todos os veículos agrupados visualmente pelo nome do proprietário,
+com ordenação secundária pela marca do veículo.
+
+
+--------------------------------------------------------------------------------
+6. RANKING DE MARCAS POR QUANTIDADE DE VEÍCULOS
+--------------------------------------------------------------------------------
+View: marcas_ranking
+
+    SELECT marca, COUNT(id) AS total
+    FROM jose_gabriel.veiculo
+    GROUP BY marca
+    ORDER BY total DESC;
+
+Agrupa veículos por marca e ordena do maior para o menor número de cadastros.
+
+
+--------------------------------------------------------------------------------
+7. VEÍCULOS POR MARCA E GÊNERO DO PROPRIETÁRIO
+--------------------------------------------------------------------------------
+View: marcas_por_genero
+
+    SELECT v.marca, u.genero, COUNT(v.id) AS total
+    FROM jose_gabriel.veiculo v
+    JOIN jose_gabriel.usuario u ON u.id = v.proprietario_id
+    GROUP BY v.marca, u.genero
+    ORDER BY v.marca ASC, total DESC;
+
+Cruza marca do veículo com gênero do proprietário para identificar o perfil
+de compradores de cada marca.
+
+
+--------------------------------------------------------------------------------
+8. GÊNERO COM MAIS VEÍCULOS CADASTRADOS
+--------------------------------------------------------------------------------
+View: genero_mais_veiculos
+
+    SELECT u.genero, COUNT(v.id) AS total
+    FROM jose_gabriel.veiculo v
+    JOIN jose_gabriel.usuario u ON u.id = v.proprietario_id
+    GROUP BY u.genero
+    ORDER BY total DESC;
+
+Indica qual gênero concentra o maior número de veículos registrados no sistema.
+
+
+--------------------------------------------------------------------------------
+9. REVISÕES POR PERÍODO
+--------------------------------------------------------------------------------
+View: revisoes_por_periodo
+
+    SELECT r.*, v.placa, v.marca, u.nome
+    FROM jose_gabriel.revisao r
+    JOIN jose_gabriel.veiculo v ON v.id = r.veiculo_id
+    JOIN jose_gabriel.usuario u ON u.id = v.proprietario_id
+    WHERE r.data_revisao BETWEEN '2024-01-01' AND '2024-12-31'
+    ORDER BY r.data_revisao ASC;
+
+Filtra revisões dentro de um intervalo de datas informado via parâmetros de URL:
+    GET /api/revisoes/relatorio/periodo/?inicio=YYYY-MM-DD&fim=YYYY-MM-DD
+Ambos os parâmetros são obrigatórios — retorna HTTP 400 se ausentes.
+
+
+--------------------------------------------------------------------------------
+10. MARCAS COM MAIS REVISÕES
+--------------------------------------------------------------------------------
+View: marcas_mais_revisoes
+
+    SELECT v.marca, COUNT(r.id) AS total
+    FROM jose_gabriel.revisao r
+    JOIN jose_gabriel.veiculo v ON v.id = r.veiculo_id
+    GROUP BY v.marca
+    ORDER BY total DESC;
+
+Identifica quais marcas de veículos passam mais frequentemente por revisões,
+útil para análise de manutenção por fabricante.
+
+
+--------------------------------------------------------------------------------
+11. PESSOAS QUE MAIS REALIZARAM REVISÕES
+--------------------------------------------------------------------------------
+View: pessoas_mais_revisoes
+
+    SELECT u.nome, u.genero, COUNT(r.id) AS total
+    FROM jose_gabriel.revisao r
+    JOIN jose_gabriel.veiculo v ON v.id = r.veiculo_id
+    JOIN jose_gabriel.usuario u ON u.id = v.proprietario_id
+    GROUP BY u.id, u.nome, u.genero
+    ORDER BY total DESC;
+
+Rank de proprietários pelo total de revisões realizadas em todos os seus
+veículos combinados.
+
+
+--------------------------------------------------------------------------------
+12. MÉDIA DE TEMPO ENTRE REVISÕES (RAW SQL — WINDOW FUNCTION)
+--------------------------------------------------------------------------------
+View: media_tempo_revisoes
+
+    SELECT
+        u.nome,
+        ROUND(
+            AVG(
+                r.data_revisao - LAG(r.data_revisao) OVER (
+                    PARTITION BY u.id ORDER BY r.data_revisao
+                )
+            )::numeric, 1
+        ) AS media_dias
+    FROM jose_gabriel.revisao r
+    JOIN jose_gabriel.veiculo v ON v.id = r.veiculo_id
+    JOIN jose_gabriel.usuario u ON u.id = v.proprietario_id
+    GROUP BY u.id, u.nome
+    HAVING COUNT(r.id) >= 2
+    ORDER BY media_dias ASC NULLS LAST;
+
+Recursos utilizados:
+  • LAG()          : window function que acessa a data da revisão imediatamente
+                     anterior de cada usuário, ordenada por data. Retorna NULL
+                     para a primeira revisão (sem revisão anterior).
+  • PARTITION BY   : isola a janela de cálculo por usuário — cada um tem sua
+                     própria sequência de revisões.
+  • AVG()          : ignora NULLs automaticamente, calculando a média apenas
+                     sobre os intervalos válidos (revisões com anterior).
+  • HAVING COUNT >= 2 : exclui usuários com menos de 2 revisões, pois não há
+                     intervalo calculável com apenas uma revisão.
+  • NULLS LAST     : empurra resultados sem média calculável para o final da lista.
+
+Esta query usa Raw SQL pois LAG() (window function) não é suportado nativamente
+pelo ORM do Django.
+
+
+--------------------------------------------------------------------------------
+13. PREVISÃO DAS PRÓXIMAS REVISÕES (RAW SQL — 3 CTEs + WINDOW FUNCTION)
+--------------------------------------------------------------------------------
+View: proximas_revisoes
+
+    WITH intervalos AS (
+        -- CTE 1: obtém cada revisão junto com a data da revisão anterior
+        --        do mesmo usuário usando LAG()
+        SELECT
+            u.id          AS usuario_id,
+            u.nome,
+            r.data_revisao,
+            LAG(r.data_revisao) OVER (
+                PARTITION BY u.id ORDER BY r.data_revisao
+            ) AS revisao_anterior
+        FROM jose_gabriel.revisao r
+        JOIN jose_gabriel.veiculo v ON v.id = r.veiculo_id
+        JOIN jose_gabriel.usuario u ON u.id = v.proprietario_id
+    ),
+    media_por_usuario AS (
+        -- CTE 2: calcula a média de dias entre revisões consecutivas.
+        --        WHERE exclui a primeira revisão de cada usuário
+        --        (revisao_anterior IS NULL) antes de fazer a média.
+        SELECT
+            usuario_id,
+            nome,
+            AVG(data_revisao - revisao_anterior) AS media_dias
+        FROM intervalos
+        WHERE revisao_anterior IS NOT NULL
+        GROUP BY usuario_id, nome
+    ),
+    ultima_revisao AS (
+        -- CTE 3: obtém apenas a revisão mais recente de cada usuário.
+        --        DISTINCT ON é exclusivo do PostgreSQL e mais eficiente
+        --        que MAX() + GROUP BY ou ROW_NUMBER() OVER().
+        SELECT DISTINCT ON (v.proprietario_id)
+            v.proprietario_id AS usuario_id,
+            r.data_revisao    AS ultima
+        FROM jose_gabriel.revisao r
+        JOIN jose_gabriel.veiculo v ON v.id = r.veiculo_id
+        ORDER BY v.proprietario_id, r.data_revisao DESC
+    )
+    -- Query final: adiciona a média de dias à última revisão para prever a próxima
+    SELECT
+        m.nome,
+        ROUND(m.media_dias::numeric, 0)                        AS media_dias,
+        u.ultima                                               AS ultima_revisao,
+        (u.ultima + (ROUND(m.media_dias::numeric, 0) || ' days')
+            ::interval)::date                                  AS proxima_revisao
+    FROM media_por_usuario m
+    JOIN ultima_revisao u ON u.usuario_id = m.usuario_id
+    ORDER BY proxima_revisao ASC;
+
+Recursos utilizados:
+  • CTE (WITH)      : divide a lógica em 3 etapas reutilizáveis e legíveis
+                      em vez de subqueries aninhadas.
+  • LAG()           : window function para acessar a revisão anterior dentro
+                      da partição de cada usuário.
+  • DISTINCT ON     : sintaxe PostgreSQL que retorna exatamente 1 linha por
+                      grupo (o mais recente), muito mais eficiente que
+                      ROW_NUMBER() OVER() + WHERE rn = 1.
+  • || ' days'      : concatena o número arredondado para formar uma string
+                      de intervalo válida para o PostgreSQL (ex: '90 days').
+  • ::interval      : cast que converte a string em tipo INTERVAL do PostgreSQL.
+  • ::date          : converte o resultado da soma (timestamp) de volta para date.
+
+Esta query usa Raw SQL pois depende de LAG(), DISTINCT ON e CTEs encadeadas —
+recursos não suportados nativamente pelo ORM do Django.
+
+
+================================================================================
+FIM DO RELATÓRIO
+================================================================================

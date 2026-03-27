@@ -1,0 +1,29 @@
+/* ── Layout base de cada página ── */
+.pagina {
+  max-width: 1100px;
+  margin: 32px auto;
+  padding: 0 24px;
+}
+
+.pagina-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.pagina-header h1 {
+  margin-bottom: 0;
+}
+
+/* ── Estados de loading e vazio ── */
+.estado-loading,
+.estado-vazio {
+  text-align: center;
+  padding: 48px;
+  color: var(--cor-texto-suave);
+  font-size: 1rem;
+}
+
+.estado-loading::before { content: "⏳ "; }
+.estado-vazio::before   { content: "📭 "; }

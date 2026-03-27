@@ -1,0 +1,610 @@
+openapi: 3.0.3
+info:
+  title: ''
+  version: 0.0.0
+paths:
+  /api/revisoes/:
+    get:
+      operationId: revisoes_retrieve
+      description: |-
+        Lista todas as revisoes com dados do veiculo e proprietario.
+        select_related faz o JOIN em uma unica query SQL.
+      tags:
+      - revisoes
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/revisoes/{id}/delete/:
+    delete:
+      operationId: revisoes_delete_destroy
+      description: Remove uma revisao pelo ID.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - revisoes
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '204':
+          description: No response body
+  /api/revisoes/{id}/update/:
+    put:
+      operationId: revisoes_update_update
+      description: Atualiza uma revisao existente. Aceita atualizacao parcial.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - revisoes
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/revisoes/creat/:
+    post:
+      operationId: revisoes_creat_create
+      description: Lanca uma nova revisao para um veiculo existente.
+      tags:
+      - revisoes
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/revisoes/relatorio/marcas/:
+    get:
+      operationId: revisoes_relatorio_marcas_retrieve
+      description: |-
+        Relatorio: marcas com maior numero de revisoes realizadas.
+
+        SQL equivalente:
+            SELECT v.marca, COUNT(r.id) as total
+            FROM jose_gabriel.revisao r
+            JOIN jose_gabriel.veiculo v ON v.id = r.veiculo_id
+            GROUP BY v.marca
+            ORDER BY total DESC
+      tags:
+      - revisoes
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/revisoes/relatorio/media_tempo/:
+    get:
+      operationId: revisoes_relatorio_media_tempo_retrieve
+      description: |-
+        Relatorio: media de dias entre revisoes consecutivas por pessoa.
+
+        Usa Raw SQL porque LAG() e uma window function do PostgreSQL
+        que nao possui suporte direto via ORM do Django para este
+        tipo de calculo encadeado com GROUP BY.
+
+        LAG(data_revisao) retorna a data da revisao anterior da mesma
+        pessoa — a diferenca entre as datas e a distancia em dias.
+      tags:
+      - revisoes
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/revisoes/relatorio/periodo/:
+    get:
+      operationId: revisoes_relatorio_periodo_retrieve
+      description: |-
+        Relatorio: revisoes dentro de um intervalo de datas.
+        Uso: /api/revisoes/relatorio/periodo/?inicio=2024-01-01&fim=2024-12-31
+
+        SQL equivalente:
+            SELECT * FROM jose_gabriel.revisao
+            WHERE data_revisao BETWEEN :inicio AND :fim
+            ORDER BY data_revisao
+      tags:
+      - revisoes
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/revisoes/relatorio/pessoas/:
+    get:
+      operationId: revisoes_relatorio_pessoas_retrieve
+      description: |-
+        Relatorio: pessoas que mais realizaram revisoes.
+
+        SQL equivalente:
+            SELECT u.nome, u.genero, COUNT(r.id) as total
+            FROM jose_gabriel.revisao r
+            JOIN jose_gabriel.veiculo v ON v.id = r.veiculo_id
+            JOIN jose_gabriel.usuario u ON u.id = v.proprietario_id
+            GROUP BY u.id, u.nome, u.genero
+            ORDER BY total DESC
+      tags:
+      - revisoes
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/revisoes/relatorio/proximas/:
+    get:
+      operationId: revisoes_relatorio_proximas_retrieve
+      description: |-
+        Relatorio: previsao das proximas revisoes por pessoa.
+
+        Usa Raw SQL com 3 CTEs encadeadas — nao e possivel expressar
+        esta logica de forma legivel via ORM do Django:
+
+        CTE 1 — intervalos:
+            Usa LAG() para obter a data da revisao anterior de cada pessoa.
+
+        CTE 2 — media_por_usuario:
+            Calcula a media de dias entre revisoes consecutivas.
+            Exclui a primeira revisao (sem revisao anterior) com WHERE.
+
+        CTE 3 — ultima_revisao:
+            Usa DISTINCT ON (exclusivo do PostgreSQL) para pegar apenas
+            a revisao mais recente de cada pessoa em uma unica query.
+
+        Query final:
+            Soma a media de dias a ultima revisao para prever a proxima data.
+      tags:
+      - revisoes
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/schema/:
+    get:
+      operationId: schema_retrieve
+      description: |-
+        OpenApi3 schema for this API. Format can be selected via content negotiation.
+
+        - YAML: application/vnd.oai.openapi
+        - JSON: application/vnd.oai.openapi+json
+      parameters:
+      - in: query
+        name: format
+        schema:
+          type: string
+          enum:
+          - json
+          - yaml
+      - in: query
+        name: lang
+        schema:
+          type: string
+          enum:
+          - af
+          - ar
+          - ar-dz
+          - ast
+          - az
+          - be
+          - bg
+          - bn
+          - br
+          - bs
+          - ca
+          - ckb
+          - cs
+          - cy
+          - da
+          - de
+          - dsb
+          - el
+          - en
+          - en-au
+          - en-gb
+          - eo
+          - es
+          - es-ar
+          - es-co
+          - es-mx
+          - es-ni
+          - es-ve
+          - et
+          - eu
+          - fa
+          - fi
+          - fr
+          - fy
+          - ga
+          - gd
+          - gl
+          - he
+          - hi
+          - hr
+          - hsb
+          - hu
+          - hy
+          - ia
+          - id
+          - ig
+          - io
+          - is
+          - it
+          - ja
+          - ka
+          - kab
+          - kk
+          - km
+          - kn
+          - ko
+          - ky
+          - lb
+          - lt
+          - lv
+          - mk
+          - ml
+          - mn
+          - mr
+          - ms
+          - my
+          - nb
+          - ne
+          - nl
+          - nn
+          - os
+          - pa
+          - pl
+          - pt
+          - pt-br
+          - ro
+          - ru
+          - sk
+          - sl
+          - sq
+          - sr
+          - sr-latn
+          - sv
+          - sw
+          - ta
+          - te
+          - tg
+          - th
+          - tk
+          - tr
+          - tt
+          - udm
+          - uk
+          - ur
+          - uz
+          - vi
+          - zh-hans
+          - zh-hant
+      tags:
+      - schema
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/vnd.oai.openapi:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/yaml:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/vnd.oai.openapi+json:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/users/:
+    get:
+      operationId: users_retrieve
+      description: |-
+        Lista todos os usuarios cadastrados.
+        Retorna id, cpf, nome, genero, idade e total de veiculos.
+      tags:
+      - users
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/users/{id}/:
+    get:
+      operationId: users_retrieve_2
+      description: |-
+        Retorna o detalhe de um usuario com veiculos e revisoes aninhados.
+        prefetch_related('veiculos__revisoes') evita o problema N+1:
+        em vez de 1 query por veiculo, traz tudo em 2 queries totais.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - users
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/users/{id}/delete/:
+    delete:
+      operationId: users_delete_destroy
+      description: |-
+        Remove um usuario pelo ID.
+        get_object_or_404 retorna 404 automaticamente se nao existir,
+        evitando o erro 500 que ocorreria com .get() sem tratamento.
+        A remocao em cascata (CASCADE na FK) apaga veiculos e revisoes.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - users
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '204':
+          description: No response body
+  /api/users/{id}/update/:
+    put:
+      operationId: users_update_update
+      description: |-
+        Atualiza um usuario existente.
+        partial=True permite enviar apenas os campos alterados,
+        sem precisar reenviar todos os campos obrigatorios.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - users
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/users/creat/:
+    post:
+      operationId: users_creat_create
+      description: |-
+        Cria um novo usuario.
+        Valida os dados via UsuarioSerializer antes de salvar.
+        Retorna 400 com detalhes dos erros se a validacao falhar.
+      tags:
+      - users
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/users/relatorio/genero/:
+    get:
+      operationId: users_relatorio_genero_retrieve
+      description: |-
+        Relatorio: pessoas separadas por genero com idade media.
+
+        SQL equivalente:
+            SELECT genero, COUNT(*) as total, AVG(idade) as idade_media
+            FROM jose_gabriel.usuario
+            GROUP BY genero
+
+        A idade e calculada via anotacao no ORM subtraindo o ano de
+        nascimento do ano atual — aproximacao suficiente para relatorio.
+      tags:
+      - users
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/veiculos/:
+    get:
+      operationId: veiculos_retrieve
+      description: |-
+        Lista todos os veiculos com dados do proprietario inclusos.
+        select_related faz um SQL JOIN — evita query extra por veiculo.
+      tags:
+      - veiculos
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/veiculos/{id}/delete/:
+    delete:
+      operationId: veiculos_delete_destroy
+      description: |-
+        Remove um veiculo pelo ID.
+        A remocao em cascata apaga todas as revisoes vinculadas.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - veiculos
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '204':
+          description: No response body
+  /api/veiculos/{id}/update/:
+    put:
+      operationId: veiculos_update_update
+      description: Atualiza campos do veiculo. Aceita atualizacao parcial.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - veiculos
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/veiculos/creat/:
+    post:
+      operationId: veiculos_creat_create
+      description: Cria um novo veiculo vinculado a um proprietario existente.
+      tags:
+      - veiculos
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/veiculos/relatorio/genero/:
+    get:
+      operationId: veiculos_relatorio_genero_retrieve
+      description: |-
+        Relatorio: qual genero possui mais veiculos cadastrados.
+
+        SQL equivalente:
+            SELECT u.genero, COUNT(v.id) as total
+            FROM jose_gabriel.veiculo v
+            JOIN jose_gabriel.usuario u ON u.id = v.proprietario_id
+            GROUP BY u.genero
+            ORDER BY total DESC
+      tags:
+      - veiculos
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/veiculos/relatorio/marcas/:
+    get:
+      operationId: veiculos_relatorio_marcas_retrieve
+      description: |-
+        Relatorio: marcas ordenadas pelo numero de veiculos cadastrados.
+
+        SQL equivalente:
+            SELECT marca, COUNT(*) as total
+            FROM jose_gabriel.veiculo
+            GROUP BY marca
+            ORDER BY total DESC
+      tags:
+      - veiculos
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/veiculos/relatorio/marcas_genero/:
+    get:
+      operationId: veiculos_relatorio_marcas_genero_retrieve
+      description: |-
+        Relatorio: totais de veiculos por marca separados por genero.
+
+        SQL equivalente:
+            SELECT v.marca, u.genero, COUNT(*) as total
+            FROM jose_gabriel.veiculo v
+            JOIN jose_gabriel.usuario u ON u.id = v.proprietario_id
+            GROUP BY v.marca, u.genero
+            ORDER BY v.marca, total DESC
+      tags:
+      - veiculos
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/veiculos/relatorio/proprietario/:
+    get:
+      operationId: veiculos_relatorio_proprietario_retrieve
+      description: |-
+        Relatorio: todos os veiculos ordenados pelo nome do proprietario.
+
+        SQL equivalente:
+            SELECT u.nome, v.marca, v.modelo, v.placa, v.ano
+            FROM jose_gabriel.veiculo v
+            JOIN jose_gabriel.usuario u ON u.id = v.proprietario_id
+            ORDER BY u.nome, v.marca
+      tags:
+      - veiculos
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+components:
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid

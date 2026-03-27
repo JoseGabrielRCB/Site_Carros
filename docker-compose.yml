@@ -1,0 +1,71 @@
+# Site_Carros/docker-compose.yml
+version: '3.9'
+ 
+services:
+ 
+  # ── Container 1: PostgreSQL ──────────────────────────
+  db:
+    image: postgres:15-alpine      # usa image oficial do Postgres
+    container_name: revisoes_db
+    restart: always
+    env_file: .env                 # lê variáveis do .env
+    environment:
+      POSTGRES_DB:       ${POSTGRES_DB}
+      POSTGRES_USER:     ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data  # persiste os dados
+    ports:
+      - "5432:5432"
+    networks:
+      - rede_app
+ 
+  # ── Container 2: Django ──────────────────────────────
+  backend:
+    build:
+      context: ./Back_End        # usa o Dockerfile de Back_End/
+    container_name: revisoes_backend
+    restart: always
+    env_file: .env
+    environment:
+      DB_NAME:     ${POSTGRES_DB}
+      DB_USER:     ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_HOST:     db             # nome do container do banco
+      DB_PORT:     5432
+      SECRET_KEY:  ${DJANGO_SECRET_KEY}
+      DEBUG:       ${DJANGO_DEBUG}
+    depends_on:
+      - db                        # aguarda o banco subir primeiro
+    ports:
+      - '8000:8000'
+    volumes:
+      - ./Back_End:/app           # hot reload em desenvolvimento
+    networks:
+      - rede_app
+ 
+  # ── Container 3: Vue + Nginx ─────────────────────────
+  frontend:
+    build:
+      context: ./Site_Carros        # usa o Dockerfile de front-end/
+    container_name: revisoes_frontend
+    restart: always
+    ports:
+      - '8080:8080'                   # acesse em http://localhost
+    depends_on:
+      - backend
+    networks:
+      - rede_app
+    volumes:
+      - ./Site_Carros:/app
+      - /app/node_modules
+ 
+# ── Volumes nomeados (dados persistem entre restarts) ────
+volumes:
+  postgres_data:
+ 
+# ── Rede interna dos containers ──────────────────────────
+networks:
+  rede_app:
+    driver: bridge
+

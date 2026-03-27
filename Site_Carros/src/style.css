@@ -1,0 +1,7 @@
+/* Importa todos os módulos de estilo na ordem correta */
+@import './assets/styles/global.css';
+@import './assets/styles/nav.css';
+@import './assets/styles/paginas.css';
+@import './assets/styles/tabelas.css';
+@import './assets/styles/formularios.css';
+@import './assets/styles/componentes.css';

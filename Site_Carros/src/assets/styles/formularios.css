@@ -1,0 +1,132 @@
+/* ── Formulários ── */
+.form-card {
+  background: var(--cor-fundo-card);
+  border-radius: var(--raio-borda);
+  box-shadow: var(--sombra);
+  padding: 32px;
+  max-width: 560px;
+}
+
+.form-grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+.form-grupo label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--cor-primaria);
+}
+
+.form-grupo input,
+.form-grupo select,
+.form-grupo textarea {
+  padding: 10px 14px;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-borda);
+  font-size: 0.95rem;
+  font-family: var(--fonte);
+  color: var(--cor-texto);
+  background: white;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-grupo input:focus,
+.form-grupo select:focus,
+.form-grupo textarea:focus {
+  outline: none;
+  border-color: var(--cor-secundaria);
+  box-shadow: 0 0 0 3px rgba(46,109,164,0.15);
+}
+
+.form-grupo input.invalido {
+  border-color: var(--cor-perigo);
+}
+
+.form-erro {
+  font-size: 0.8rem;
+  color: var(--cor-perigo);
+  margin-top: 2px;
+}
+
+/* ── Botões ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 20px;
+  border: none;
+  border-radius: var(--raio-borda);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+  text-decoration: none;
+}
+
+.btn:hover    { opacity: 0.88; }
+.btn:active   { transform: scale(0.97); }
+
+.btn-primario { background: var(--cor-primaria);   color: white; }
+.btn-sucesso  { background: var(--cor-destaque);   color: white; }
+.btn-perigo   { background: var(--cor-perigo);     color: white; }
+.btn-neutro   { background: var(--cor-borda);      color: var(--cor-texto); }
+.btn-sm       { padding: 5px 12px; font-size: 0.8rem; }
+
+/* ── Filtros de busca ── */
+.filtros {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.filtro-input {
+  flex: 1;
+  min-width: 200px;
+  padding: 9px 14px;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-borda);
+  font-size: 0.93rem;
+  font-family: var(--fonte);
+  color: var(--cor-texto);
+  background: white;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.filtro-input:focus {
+  outline: none;
+  border-color: var(--cor-secundaria);
+  box-shadow: 0 0 0 3px rgba(46,109,164,0.15);
+}
+
+.filtro-select {
+  padding: 9px 14px;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-borda);
+  font-size: 0.93rem;
+  font-family: var(--fonte);
+  color: var(--cor-texto);
+  background: white;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.filtro-select:focus {
+  outline: none;
+  border-color: var(--cor-secundaria);
+}
+
+/* ── Separador de seção dentro do formulário ── */
+.form-separador {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--cor-secundaria);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  border-bottom: 1px solid var(--cor-borda);
+  padding-bottom: 6px;
+  margin: 20px 0 16px;
+}
