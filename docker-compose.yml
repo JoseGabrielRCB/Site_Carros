@@ -36,6 +36,7 @@ services:
       SECRET_KEY:  ${DJANGO_SECRET_KEY}
       DEBUG:       ${DJANGO_DEBUG}
     depends_on:
+      - redis
       - db                        # aguarda o banco subir primeiro
     ports:
       - '8000:8000'
@@ -59,6 +60,13 @@ services:
     volumes:
       - ./Site_Carros:/app
       - /app/node_modules
+  # ── Container 4: Redis ──────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: revisoes_redis
+    restart: always
+    networks:
+      - rede_app
  
 # ── Volumes nomeados (dados persistem entre restarts) ────
 volumes:
