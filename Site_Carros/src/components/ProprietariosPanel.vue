@@ -189,7 +189,7 @@
               <td>
                 <div class="acoes-cell-prop">
                   <button class="btn btn-info btn-xs"     @click="abrirVeiculos(u)" title="Ver veículos">🚗</button>
-                  <button class="btn btn-primario btn-xs" @click="abrirModalEditar(u)">Editar</button>
+                  <button class="btn btn-primario btn-xs" @click="abrirModalEditar(u)">✏️</button>
                   <button class="btn btn-perigo btn-xs"   @click="confirmarDeletar(u)">Excluir</button>
                 </div>
               </td>

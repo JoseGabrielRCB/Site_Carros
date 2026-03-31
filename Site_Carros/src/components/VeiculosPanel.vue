@@ -75,9 +75,9 @@
               <td>{{ v.ano }}</td>
               <td>
                 <div class="acoes-cell">
-                  <button class="btn btn-info btn-sm"     @click="$emit('abrirRevisoes', v)">📋</button>
-                  <button class="btn btn-primario btn-sm" @click="$emit('abrirModalDetalhesVei', v)">🔍 Detalhes</button>
-                  <button class="btn btn-info btn-sm"     @click="$emit('abrirModalEditarVeiculo', v)">Editar</button>
+                  <button class="btn btn-info btn-sm"     @click="$emit('abrirRevisoes', v)">Revisões</button>
+                  <button class="btn btn-primario btn-sm" @click="$emit('abrirModalDetalhesVei', v)">🔍</button>
+                  <button class="btn btn-info btn-sm"     @click="$emit('abrirModalEditarVeiculo', v)">✏️</button>
                   <button class="btn btn-perigo btn-sm"   @click="$emit('confirmarDeletarVei', v)">Excluir</button>
                 </div>
               </td>
